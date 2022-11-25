@@ -1,19 +1,18 @@
 package com.example.sdk.demoapp
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
-import com.google.android.material.snackbar.Snackbar
-import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
+import android.provider.Settings
 import android.view.Menu
 import android.view.MenuItem
+import androidx.appcompat.app.AppCompatActivity
+import com.example.sdk.ExampleSdk
 import com.example.sdk.demoapp.databinding.ActivityMainBinding
+import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,13 +23,11 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
 
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        appBarConfiguration = AppBarConfiguration(navController.graph)
-        setupActionBarWithNavController(navController, appBarConfiguration)
-
-        binding.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show()
+        binding.content.nonInteractiveFunctionButton.setOnClickListener {
+            startNonInteractiveFunction()
+        }
+        binding.content.interactiveFunctionButton.setOnClickListener {
+            startInteractiveFunction()
         }
     }
 
@@ -45,14 +42,47 @@ class MainActivity : AppCompatActivity() {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
-            R.id.action_settings -> true
+            R.id.action_settings -> {
+                startActivity(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", applicationContext.packageName, null)
+                    )
+                )
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        return navController.navigateUp(appBarConfiguration)
-                || super.onSupportNavigateUp()
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        ExampleSdk.getInstance(applicationContext)
+            .handleInteractiveFunctionResult(
+                requestCode, resultCode
+            ) {
+                showResult(it)
+            }
     }
+
+    private fun startNonInteractiveFunction() {
+        val parameter = binding.content.parameterEditText.text?.toString()
+        ExampleSdk.getInstance(applicationContext)
+            .nonInteractiveFunction(parameter) {
+                showResult(it)
+            }
+    }
+
+    private fun startInteractiveFunction() {
+        val parameter = binding.content.parameterEditText.text?.toString()
+        ExampleSdk.getInstance(applicationContext)
+            .interactiveFunction(parameter, this)
+    }
+
+    private fun showResult(result: Any) {
+        Snackbar.make(binding.root, "result = $result", Snackbar.LENGTH_LONG)
+            .setAction("Done", null).show()
+    }
+
 }
